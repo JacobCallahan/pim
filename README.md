@@ -1,0 +1,2 @@
+# pim
+Python Image Manipulator
