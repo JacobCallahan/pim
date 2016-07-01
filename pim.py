@@ -3,15 +3,16 @@ import argparse
 from PIL import Image
 from lib import color, helpers, sort, transform
 # pylint: disable=C0103, C0325, C0111, E501
-# todo: resize images
+# todo: combine images
 
 
-def pim(f_path, n_path=None, actions=['sort'], modifiers=['freq'], col=[0],
-        h_col=None, step=1, group=None, strength=20, spread=0):
+def pim(f_path, n_path=None, sec_img=None, actions=['sort'], modifiers=['freq'], col=[0],
+        h_col=None, step=1, group=None, strength=20, spread=0, method='average'):
     """Main function for the python image manipulator.
 
     f_path: path to the image file.
     n_path: path to save the new image.
+    sec_img: path to a second image used in blending.
     action: what to perform on the image.
     modifiers: any modifiers available to the action.
     col: target color for color-based actions.
@@ -19,6 +20,7 @@ def pim(f_path, n_path=None, actions=['sort'], modifiers=['freq'], col=[0],
     group: number of lines to group together, if applicable.
     strength: an integer value, can sometimes be neagtive.
     spread: integer denoting how wide a range is acceptable for matching color.
+    method: the operation to perform while blending images.
     """
     if not n_path:
         # Contruct a new path to avoiding writing over the original.
@@ -30,6 +32,10 @@ def pim(f_path, n_path=None, actions=['sort'], modifiers=['freq'], col=[0],
         else:
             n_path = image_name
     im = Image.open(f_path)
+
+    if 'blend' in actions:
+        im2 = Image.open(sec_img)
+        im = transform.blend_images(im, im2, method)
 
     if 'unhide' in actions:
         im = color.unhide(im)
@@ -110,8 +116,15 @@ if __name__ == "__main__":
         help="Make changes to the colors in an image. See readme for accepted values. "
         "Use the correct flags to set spread and strength.")
     parser.add_argument(
+        "-b", "--blend", type=str,
+        help="<second image path>. Blend two images together. Use the --method "
+        "flag to specify the method to use (Default is average).")
+    parser.add_argument(
         "-m", "--modifier", type=str,
         help="Set modifiers for --sort and --transform.")
+    parser.add_argument(
+        "--method", type=str,
+        help="How to combine images (average, sum, subtract, multiply, divide).")
     parser.add_argument(
         "-g", "--grayscale", action="store_true",
         help="Make the image grayscale.")
@@ -156,6 +169,8 @@ if __name__ == "__main__":
         modifiers.extend(args.transform.split(","))
     if args.unhide:
         actions.append('unhide')
+    if args.blend:
+        actions.append('blend')
     if args.randomize:
         actions.append('randomize')
     if args.grayscale:
@@ -189,6 +204,7 @@ if __name__ == "__main__":
     strength = 1 if not args.strength else args.strength
     spread = 0 if not args.spread else args.spread
 
-    pim(f_path=args.path, n_path=args.new_path, actions=actions,
+    pim(f_path=args.path, n_path=args.new_path, sec_img = args.blend, actions=actions,
         modifiers=modifiers, step=step, group=args.group, col=col,
-        h_col=h_col, strength=strength, spread=spread)
+        h_col=h_col, strength=strength, spread=spread, method=args.method)
+
